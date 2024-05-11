@@ -6,7 +6,7 @@ import (
 	"log"
 	"math/rand"
 
-	"github.com/hajimehoshi/ebiten"
+	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const scale = 2
@@ -156,11 +156,53 @@ func is_alive(x int, y int, size int, field [][]int) int {
 }
 
 // Main
-func render(screen *ebiten.Image) {
+// func render(screen *ebiten.Image) {
+// 	screen.Fill(white)
+// 	for x := 0; x < WIDTH; x++ {
+// 		for y := 0; y < HEIGHT; y++ {
+// 			if grid[x][y] > 0 {
+// 				for x1 := 0; x1 < scale; x1++ {
+// 					for y1 := 0; y1 < scale; y1++ {
+// 						screen.Set((x*scale)+x1, (y*scale)+y1, black)
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }
+// func frame(screen *ebiten.Image) error {
+// 	counter++
+// 	var err error = nil
+// 	if counter == 20 {
+// 		grid := gen_new_generation()
+// 		err = gen_new_generation()
+// 		counter = 0
+// 	}
+// 	if !ebiten.IsDrawingSkipped() {
+// 		render(screen)
+// 	}
+// 	return err
+// }
+
+// Update proceeds the game state.
+// Update is called every tick (1/60 [s] by default).
+func (g *MyGame) Update() error {
+	g.counter++
+	if g.counter == 60 {
+		g.field = gen_new_generation(g.size, g.field)
+		g.counter = 0
+	}
+	return nil
+}
+
+// Draw draws the game screen.
+// Draw is called every frame (typically 1/60[s] for 60Hz display).
+func (g *MyGame) Draw(screen *ebiten.Image) {
+	// Write your game's rendering.
 	screen.Fill(white)
-	for x := 0; x < WIDTH; x++ {
-		for y := 0; y < HEIGHT; y++ {
-			if grid[x][y] > 0 {
+	for x := 0; x < g.size; x++ {
+		for y := 0; y < g.size; y++ {
+			if g.field[x][y] == 1 {
 				for x1 := 0; x1 < scale; x1++ {
 					for y1 := 0; y1 < scale; y1++ {
 						screen.Set((x*scale)+x1, (y*scale)+y1, black)
@@ -170,82 +212,35 @@ func render(screen *ebiten.Image) {
 		}
 	}
 }
-func frame(screen *ebiten.Image) error {
-	counter++
-	var err error = nil
-	if counter == 20 {
-		grid := gen_new_generation()
-		err = gen_new_generation()
-		counter = 0
-	}
-	if !ebiten.IsDrawingSkipped() {
-		render(screen)
-	}
-	return err
-}
-
-// Game implements ebiten.Game interface.
-type Game struct {
-	counter int
-	field   [][]int
-	size    int
-}
-
-// Update proceeds the game state.
-// Update is called every tick (1/60 [s] by default).
-func (g *Game) Update() error {
-	g.counter++
-	return nil
-}
-
-// Draw draws the game screen.
-// Draw is called every frame (typically 1/60[s] for 60Hz display).
-func (g *Game) Draw(screen *ebiten.Image) {
-	// Write your game's rendering.
-}
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (g *MyGame) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return 640, 640
 }
 
 func main() {
 	// Specify the window size as you like. Here, a doubled size is specified.
-	ebiten.SetWindowSize(640, 640)
+	var _size = 640
+
+	game := &MyGame{
+		counter: 0,
+		field:   generate_field(_size),
+		size:    _size,
+	}
+
+	ebiten.SetWindowSize(game.size, game.size)
 	ebiten.SetWindowTitle("Conway's game of life")
+
 	// Call ebiten.RunGame to start your game loop.
-	if err := ebiten.RunGame(&Game{}); err != nil {
+	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// func main() {
-// 	var n = 5
-// 	grid := generate_field(n)
-
-// 	var game ebiten.Game =
-// 	ebiten.RunGame()
-// 	if err := ebiten.Run(frame, WIDTH*scale, HEIGHT*scale, 2, "Conway's Game of Go"); err != nil {
-// 		log.Fatal(err)
-// 	}
-// }
-
-// func main() {
-// 	// генерируем рандомное поле n на n
-// 	var n = 5
-// 	var field = generate_field(n)
-// 	fmt.Println(field)
-
-// 	// печатаем поле
-// 	print_field(field)
-
-// 	// обновляем состояния поля (кто-то умирает, кто-то остается, кто-то рождается)
-// 	var new_gen = gen_new_generation(n, field)
-// 	fmt.Println()
-// 	// var p POS = POS{2, 0}
-// 	print_field(new_gen)
-// 	// var p POS = POS{5, 1}
-// 	// var neigbours = get_next_cell_status(p, n, field)
-// 	// fmt.Println(neigbours)
-// }
+// Game implements ebiten.Game interface.
+type MyGame struct {
+	counter int
+	field   [][]int
+	size    int
+}
