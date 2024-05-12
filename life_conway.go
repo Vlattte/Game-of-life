@@ -9,7 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const scale = 2
+const scale = 4
 
 var black color.RGBA = color.RGBA{75, 139, 190, 255}  //95,95,95
 var white color.RGBA = color.RGBA{255, 232, 115, 255} //233,233,233
