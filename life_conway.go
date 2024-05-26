@@ -1,11 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
+	_ "image/png"
 	"log"
 	"math/rand"
 
+	"github.com/ebitenui/ebitenui"
+	"github.com/ebitenui/ebitenui/image"
+	"github.com/ebitenui/ebitenui/widget"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 const scale = 4
@@ -14,7 +20,7 @@ var black color.RGBA = color.RGBA{75, 139, 190, 255}  //95,95,95
 var white color.RGBA = color.RGBA{255, 232, 115, 255} //233,233,233
 
 const (
-	screenWidth  = 740
+	screenWidth  = 700
 	screenHeight = 640
 
 	gameWidth  = 640 / 4
@@ -143,23 +149,15 @@ func is_alive(x int, y int, size int, field [][]byte) byte {
 	return field[y][x]
 }
 
-type touch struct {
-	id  ebiten.TouchID
-	pos pos
-}
-
-type pos struct {
-	x int
-	y int
-}
-
 // Game implements ebiten.Game interface.
 type MyGame struct {
 	// состояние игры
-	counter  int
-	is_pause bool
+	counter        int
+	is_pause       bool
+	is_figure_draw bool
 
 	field  [][]byte
+	pixels []PIXEL
 	width  int
 	height int
 
@@ -167,22 +165,180 @@ type MyGame struct {
 	x_offset int
 	y_offset int
 
-	cursor pos
+	cursor POS
 
-	canvasImage *ebiten.Image
+	ui *ebitenui.UI
+	// btn *widget.Button
 }
 
 func NewGame(maxInitLiveCells int) *MyGame {
 	g := &MyGame{
-		canvasImage: ebiten.NewImage(screenWidth, screenHeight),
-		counter:     10,
-		is_pause:    false,
-		width:       gameWidth,
-		height:      gameHeight,
-		x_offset:    gameWidth / 2,
-		y_offset:    gameHeight / 2,
+		counter:        10,
+		is_pause:       false,
+		is_figure_draw: false,
+		width:          gameWidth,
+		height:         gameHeight,
+		x_offset:       gameWidth / 2,
+		y_offset:       gameHeight / 2,
+		// btn:      button,
 	}
 
+	// load images for button states: idle, hover, and pressed
+
+	rootContainer := widget.NewContainer(
+		widget.ContainerOpts.Layout(widget.NewRowLayout(widget.RowLayoutOpts.Direction(widget.DirectionVertical),
+			widget.RowLayoutOpts.Spacing(10))),
+	)
+
+	// BLOCK
+	block_image, _ := loadButtonImage("patterns/block.png")
+	button_block := widget.NewButton(
+		// set general widget options
+		widget.ButtonOpts.WidgetOpts(
+			widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+				Position: widget.RowLayoutPositionEnd,
+			}),
+		),
+
+		// specify the images to use
+		widget.ButtonOpts.Image(block_image),
+
+		// add a handler that reacts to clicking the button
+		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
+			// BLOCK
+			clear(g.pixels)
+			g.is_figure_draw = true
+			g.pixels = append(g.pixels, PIXEL{0, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{1, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{0, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{1, 1, 1})
+		}),
+	)
+
+	// GLIDER
+	glider_image, _ := loadButtonImage("patterns/glider.png")
+	button_glider := widget.NewButton(
+		// set general widget options
+		widget.ButtonOpts.WidgetOpts(
+			widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+				Position: widget.RowLayoutPositionEnd,
+			}),
+		),
+
+		// specify the images to use
+		widget.ButtonOpts.Image(glider_image),
+
+		// add a handler that reacts to clicking the button
+		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
+			// GLIDER
+			clear(g.pixels)
+			g.is_figure_draw = true
+			g.pixels = append(g.pixels, PIXEL{0, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{1, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{2, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{2, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{2, 1, 1})
+		}),
+	)
+
+	// PULSAR
+	pulsar_image, _ := loadButtonImage("patterns/pulsar.png")
+	button_pulsar := widget.NewButton(
+		// set general widget options
+		widget.ButtonOpts.WidgetOpts(
+			widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+				Position: widget.RowLayoutPositionEnd,
+			}),
+		),
+
+		// specify the images to use
+		widget.ButtonOpts.Image(pulsar_image),
+
+		// add a handler that reacts to clicking the button
+		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
+			// GLIDER
+			clear(g.pixels)
+			g.is_figure_draw = true
+			g.pixels = append(g.pixels, PIXEL{0, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{1, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{2, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{2, 1, 1})
+
+			g.pixels = append(g.pixels, PIXEL{0, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{1, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{2, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{2, 5, 1})
+
+			g.pixels = append(g.pixels, PIXEL{4, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{4, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{4, -4, 1})
+			g.pixels = append(g.pixels, PIXEL{5, -2, 1})
+
+			g.pixels = append(g.pixels, PIXEL{9, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{10, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{10, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{10, -4, 1})
+
+			g.pixels = append(g.pixels, PIXEL{4, 8, 1})
+			g.pixels = append(g.pixels, PIXEL{4, 9, 1})
+			g.pixels = append(g.pixels, PIXEL{4, 10, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 8, 1})
+
+			g.pixels = append(g.pixels, PIXEL{9, 8, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 9, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 10, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 8, 1})
+
+			g.pixels = append(g.pixels, PIXEL{12, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{13, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{14, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{12, 1, 1})
+
+			g.pixels = append(g.pixels, PIXEL{12, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{13, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{14, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{12, 5, 1})
+
+			g.pixels = append(g.pixels, PIXEL{4, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{4, 2, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 2, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{6, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{6, 1, 1})
+
+			g.pixels = append(g.pixels, PIXEL{8, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{8, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{9, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 2, 1})
+			g.pixels = append(g.pixels, PIXEL{9, 2, 1})
+
+			g.pixels = append(g.pixels, PIXEL{4, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{4, 5, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{6, 5, 1})
+			g.pixels = append(g.pixels, PIXEL{6, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 6, 1})
+
+			g.pixels = append(g.pixels, PIXEL{8, 5, 1})
+			g.pixels = append(g.pixels, PIXEL{8, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{9, 6, 1})
+			g.pixels = append(g.pixels, PIXEL{9, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 5, 1})
+		}),
+	)
+
+	// add the button as a child of the container
+	rootContainer.AddChild(button_block)
+	rootContainer.AddChild(button_glider)
+	rootContainer.AddChild(button_pulsar)
+
+	// construct the UI
+	_ui := ebitenui.UI{
+		Container: rootContainer,
+	}
+	g.ui = &_ui
 	g.init(maxInitLiveCells)
 
 	return g
@@ -209,6 +365,7 @@ func (g *MyGame) init(maxLiveCells int) {
 func (g *MyGame) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeySpace) {
 		g.is_pause = !g.is_pause
+		g.counter = 0
 	}
 
 	// если пауза, то не обновляем игру
@@ -222,12 +379,21 @@ func (g *MyGame) Update() error {
 		g.counter = 0
 	}
 
+	// update the UI
+	g.ui.Update()
+
 	// рисуем пиксели, если нарисовали в игровой зоне
 	mx, my := ebiten.CursorPosition()
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		g.paint(g.canvasImage, mx, my)
+		if g.is_figure_draw {
+			g.paintFigure(g.pixels, mx, my)
+
+		} else {
+			g.paint(mx, my)
+			fmt.Println("PRINT")
+		}
 	}
-	g.cursor = pos{
+	g.cursor = POS{
 		x: mx,
 		y: my,
 	}
@@ -236,10 +402,44 @@ func (g *MyGame) Update() error {
 }
 
 // paint draws the brush on the given canvas image at the position (x, y).
-func (g *MyGame) paint(canvas *ebiten.Image, x, y int) {
+func (g *MyGame) paint(x, y int) {
 	if x < gameWidth*4 && y < gameWidth*4 {
 		g.field[x/4][y/4] = 1
 	}
+}
+
+type PIXEL struct {
+	x     int
+	y     int
+	value byte
+}
+
+func (g *MyGame) paintFigure(pixels []PIXEL, x, y int) {
+	var loc_x = x / 4
+	var loc_y = y / 4
+	fmt.Println()
+	fmt.Println()
+	for _, pix := range pixels {
+		if pix.x+loc_x > gameHeight-1 || pix.x+loc_x < 0 || pix.y+loc_y > gameWidth-1 || pix.y+loc_y < 0 {
+			continue
+		}
+		g.field[pix.x+loc_x][pix.y+loc_y] = pix.value
+		fmt.Println(pix.x+loc_x, "   ", pix.y+loc_y)
+	}
+	g.is_figure_draw = false
+}
+
+func loadButtonImage(filename string) (*widget.ButtonImage, error) {
+	var img, _, _ = ebitenutil.NewImageFromFile(filename)
+	idle := image.NewNineSliceSimple(img, 1, 50)
+	hover := image.NewNineSliceSimple(img, 1, 50)
+	pressed := image.NewNineSliceSimple(img, 1, 50)
+
+	return &widget.ButtonImage{
+		Idle:    idle,
+		Hover:   hover,
+		Pressed: pressed,
+	}, nil
 }
 
 // Draw draws the game screen.
@@ -249,7 +449,18 @@ func (g *MyGame) Draw(screen *ebiten.Image) {
 	screen.Fill(white)
 	// screen.DrawImage(g.canvasImage, nil)
 
+	// draw the UI onto the screen
+	g.ui.Draw(screen)
+
 	// рисуем линии отделяющие шаблонные фигуры
+	ebitenutil.DrawRect(screen, screenWidth-60, 0, 10, screenHeight, color.Black)
+
+	// кнопки
+	// var img, _, _ = ebitenutil.NewImageFromFile("patterns/block.png")
+	// op := ebiten.DrawImageOptions{}
+	// // op.GeoM.Scale(0.5, 0.5)
+	// op.GeoM.Translate(screenWidth-90, 0)
+	// screen.DrawImage(img, &op)
 
 	// вывод положения курсора
 	// msg := fmt.Sprintf("(%d, %d)", g.cursor.x, g.cursor.y)
@@ -281,7 +492,7 @@ func main() {
 
 	// Call ebiten.RunGame to start your game loop.
 	// int((screenWidth * screenHeight) / 100)
-	if err := ebiten.RunGame(NewGame(int((gameWidth * gameWidth) / 10))); err != nil {
+	if err := ebiten.RunGame(NewGame(0)); err != nil {
 		log.Fatal(err)
 	}
 }
