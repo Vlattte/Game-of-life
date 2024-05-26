@@ -329,10 +329,63 @@ func NewGame(maxInitLiveCells int) *MyGame {
 		}),
 	)
 
+	// BLINKER
+	blinker_image, _ := loadButtonImage("patterns/blinker.png")
+	button_blinker := widget.NewButton(
+		// set general widget options
+		widget.ButtonOpts.WidgetOpts(
+			widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+				Position: widget.RowLayoutPositionEnd,
+			}),
+		),
+
+		// specify the images to use
+		widget.ButtonOpts.Image(blinker_image),
+
+		// add a handler that reacts to clicking the button
+		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
+			// BLINKER
+			clear(g.pixels)
+			g.is_figure_draw = true
+			g.pixels = append(g.pixels, PIXEL{0, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{0, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{0, -1, 1})
+		}),
+	)
+
+	// TOAD
+	toad_image, _ := loadButtonImage("patterns/toad.png")
+	button_toad := widget.NewButton(
+		// set general widget options
+		widget.ButtonOpts.WidgetOpts(
+			widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+				Position: widget.RowLayoutPositionEnd,
+			}),
+		),
+
+		// specify the images to use
+		widget.ButtonOpts.Image(toad_image),
+
+		// add a handler that reacts to clicking the button
+		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
+			// TOAD
+			clear(g.pixels)
+			g.is_figure_draw = true
+			g.pixels = append(g.pixels, PIXEL{0, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{0, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{1, 2, 1})
+			g.pixels = append(g.pixels, PIXEL{2, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{3, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{3, 1, 1})
+		}),
+	)
+
 	// add the button as a child of the container
 	rootContainer.AddChild(button_block)
 	rootContainer.AddChild(button_glider)
 	rootContainer.AddChild(button_pulsar)
+	rootContainer.AddChild(button_blinker)
+	rootContainer.AddChild(button_toad)
 
 	// construct the UI
 	_ui := ebitenui.UI{
