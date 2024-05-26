@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
 	"log"
 	"math/rand"
@@ -14,41 +13,30 @@ const scale = 4
 var black color.RGBA = color.RGBA{75, 139, 190, 255}  //95,95,95
 var white color.RGBA = color.RGBA{255, 232, 115, 255} //233,233,233
 
+const (
+	screenWidth  = 740
+	screenHeight = 640
+
+	gameWidth  = 640 / 4
+	gameHeight = 640 / 4
+)
+
 type POS struct {
 	x int
 	y int
 }
 
-func print_field(arr [][]int) {
-	if len(arr) == 0 {
-		return
-	}
-
-	loop(arr[0])
-	print_field(arr[1:])
-}
-
-func loop(arr []int) {
-	if len(arr) == 0 {
-		fmt.Println()
-		return
-	}
-
-	fmt.Print(arr[0], " ")
-	loop(arr[1:])
-}
-
-func generate_row(size int) []int {
-	var arr = []int{}
+func generate_row(size int) []byte {
+	var arr = []byte{}
 	return generate_row_rec(size, arr)
 }
 
-func generate_row_rec(size int, arr []int) []int {
+func generate_row_rec(size int, arr []byte) []byte {
 	if len(arr) == size {
 		return arr
 	}
 
-	if rand.Float32() < 0.5 {
+	if rand.Float32() < 0.1 {
 		var new_arr = append(arr, 1)
 		return generate_row_rec(size, new_arr)
 	} else {
@@ -57,12 +45,12 @@ func generate_row_rec(size int, arr []int) []int {
 	}
 }
 
-func generate_field(size int) [][]int {
-	var arr = [][]int{}
+func generate_field(size int) [][]byte {
+	var arr = [][]byte{}
 	return generate_field_rec(size, arr)
 }
 
-func generate_field_rec(size int, field [][]int) [][]int {
+func generate_field_rec(size int, field [][]byte) [][]byte {
 	if len(field) == size {
 		return field
 	}
@@ -74,15 +62,15 @@ func generate_field_rec(size int, field [][]int) [][]int {
 }
 
 // генерируем новое поколение
-func gen_new_generation(size int, field [][]int) [][]int {
+func gen_new_generation(size int, field [][]byte) [][]byte {
 	var coord POS = POS{0, 0}
-	var new_field = [][]int{}
+	var new_field = [][]byte{}
 	var new_generation = update_field(coord, size, field, new_field)
 	return new_generation
 }
 
 // проход по элементам поля
-func update_field(coord POS, size int, field [][]int, gen_field [][]int) [][]int {
+func update_field(coord POS, size int, field [][]byte, gen_field [][]byte) [][]byte {
 	if len(gen_field) == size {
 		return gen_field
 	}
@@ -94,14 +82,14 @@ func update_field(coord POS, size int, field [][]int, gen_field [][]int) [][]int
 	return update_field(next_coord, size, field, new_field)
 }
 
-func update_row(coord POS, size int, field [][]int) []int {
-	var init_row = []int{}
+func update_row(coord POS, size int, field [][]byte) []byte {
+	var init_row = []byte{}
 	var new_row = update_row_rec(coord, size, field, init_row)
 	return new_row
 }
 
 // обновляем статусы по строке и возвращаем ее полностью
-func update_row_rec(coord POS, size int, field [][]int, new_row []int) []int {
+func update_row_rec(coord POS, size int, field [][]byte, new_row []byte) []byte {
 	// смотрим выживет ли клетка в новом поколении
 	var new_cell_status = get_next_cell_status(coord, size, field)
 
@@ -116,7 +104,7 @@ func update_row_rec(coord POS, size int, field [][]int, new_row []int) []int {
 }
 
 // считаем число соседей для переданной клетки и определяем будет ли она живой
-func get_next_cell_status(coord POS, size int, field [][]int) int {
+func get_next_cell_status(coord POS, size int, field [][]byte) byte {
 	// проверяем все соседей
 	var l_up = is_alive(coord.x-1, coord.y-1, size, field)
 	var up = is_alive(coord.x, coord.y-1, size, field)
@@ -146,7 +134,7 @@ func get_next_cell_status(coord POS, size int, field [][]int) int {
 }
 
 // проверяем, живая ли ячейка
-func is_alive(x int, y int, size int, field [][]int) int {
+func is_alive(x int, y int, size int, field [][]byte) byte {
 	// если вышли за поле, то там клетки нет
 	if x > size-1 || x < 0 || y > size-1 || y < 0 {
 		return 0
@@ -155,53 +143,120 @@ func is_alive(x int, y int, size int, field [][]int) int {
 	return field[y][x]
 }
 
-// Main
-// func render(screen *ebiten.Image) {
-// 	screen.Fill(white)
-// 	for x := 0; x < WIDTH; x++ {
-// 		for y := 0; y < HEIGHT; y++ {
-// 			if grid[x][y] > 0 {
-// 				for x1 := 0; x1 < scale; x1++ {
-// 					for y1 := 0; y1 < scale; y1++ {
-// 						screen.Set((x*scale)+x1, (y*scale)+y1, black)
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// }
-// func frame(screen *ebiten.Image) error {
-// 	counter++
-// 	var err error = nil
-// 	if counter == 20 {
-// 		grid := gen_new_generation()
-// 		err = gen_new_generation()
-// 		counter = 0
-// 	}
-// 	if !ebiten.IsDrawingSkipped() {
-// 		render(screen)
-// 	}
-// 	return err
-// }
+type touch struct {
+	id  ebiten.TouchID
+	pos pos
+}
+
+type pos struct {
+	x int
+	y int
+}
+
+// Game implements ebiten.Game interface.
+type MyGame struct {
+	// состояние игры
+	counter  int
+	is_pause bool
+
+	field  [][]byte
+	width  int
+	height int
+
+	// сдвиги координат, чтобы массив с полем был больше отображаемой области
+	x_offset int
+	y_offset int
+
+	cursor pos
+
+	canvasImage *ebiten.Image
+}
+
+func NewGame(maxInitLiveCells int) *MyGame {
+	g := &MyGame{
+		canvasImage: ebiten.NewImage(screenWidth, screenHeight),
+		counter:     10,
+		is_pause:    false,
+		width:       gameWidth,
+		height:      gameHeight,
+		x_offset:    gameWidth / 2,
+		y_offset:    gameHeight / 2,
+	}
+
+	g.init(maxInitLiveCells)
+
+	return g
+}
+
+// init inits MyGame with a random state.
+func (g *MyGame) init(maxLiveCells int) {
+	g.field = make([][]byte, g.width, g.height)
+	for i := 0; i < g.height; i++ {
+		for j := 0; j < g.width; j++ {
+			g.field[i] = append(g.field[i], 0)
+		}
+	}
+
+	for i := 0; i < maxLiveCells; i++ {
+		x := rand.Intn(g.height)
+		y := rand.Intn(g.width)
+		g.field[x][y] = 1
+	}
+}
 
 // Update proceeds the game state.
 // Update is called every tick (1/60 [s] by default).
 func (g *MyGame) Update() error {
-	g.counter++
-	if g.counter == 60 {
-		g.field = gen_new_generation(g.size, g.field)
+	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		g.is_pause = !g.is_pause
+	}
+
+	// если пауза, то не обновляем игру
+	if !g.is_pause {
+		g.counter++
+	}
+
+	// переходим к следующему поколению
+	if g.counter == 20 {
+		g.field = gen_new_generation(g.width, g.field)
 		g.counter = 0
 	}
+
+	// рисуем пиксели, если нарисовали в игровой зоне
+	mx, my := ebiten.CursorPosition()
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		g.paint(g.canvasImage, mx, my)
+	}
+	g.cursor = pos{
+		x: mx,
+		y: my,
+	}
+
 	return nil
+}
+
+// paint draws the brush on the given canvas image at the position (x, y).
+func (g *MyGame) paint(canvas *ebiten.Image, x, y int) {
+	if x < gameWidth*4 && y < gameWidth*4 {
+		g.field[x/4][y/4] = 1
+	}
 }
 
 // Draw draws the game screen.
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *MyGame) Draw(screen *ebiten.Image) {
-	// Write your game's rendering.
+	// очищаем экран
 	screen.Fill(white)
-	for x := 0; x < g.size; x++ {
-		for y := 0; y < g.size; y++ {
+	// screen.DrawImage(g.canvasImage, nil)
+
+	// рисуем линии отделяющие шаблонные фигуры
+
+	// вывод положения курсора
+	// msg := fmt.Sprintf("(%d, %d)", g.cursor.x, g.cursor.y)
+	// ebitenutil.DebugPrint(screen, msg)
+
+	for x := 0; x < gameHeight; x++ {
+		for y := 0; y < gameWidth; y++ {
 			if g.field[x][y] == 1 {
 				for x1 := 0; x1 < scale; x1++ {
 					for y1 := 0; y1 < scale; y1++ {
@@ -215,32 +270,18 @@ func (g *MyGame) Draw(screen *ebiten.Image) {
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
-func (g *MyGame) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 640, 640
+func (g *MyGame) Layout(outsideWidth, outsideHeight int) (_screenWidth, _screenHeight int) {
+	return outsideWidth, outsideHeight
 }
 
 func main() {
 	// Specify the window size as you like. Here, a doubled size is specified.
-	var _size = 640
-
-	game := &MyGame{
-		counter: 0,
-		field:   generate_field(_size),
-		size:    _size,
-	}
-
-	ebiten.SetWindowSize(game.size, game.size)
+	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Conway's game of life")
 
 	// Call ebiten.RunGame to start your game loop.
-	if err := ebiten.RunGame(game); err != nil {
+	// int((screenWidth * screenHeight) / 100)
+	if err := ebiten.RunGame(NewGame(int((gameWidth * gameWidth) / 10))); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// Game implements ebiten.Game interface.
-type MyGame struct {
-	counter int
-	field   [][]int
-	size    int
 }
