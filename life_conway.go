@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
 	_ "image/png"
 	"log"
@@ -174,7 +173,7 @@ type MyGame struct {
 func NewGame(maxInitLiveCells int) *MyGame {
 	g := &MyGame{
 		counter:        10,
-		is_pause:       false,
+		is_pause:       true,
 		is_figure_draw: false,
 		width:          gameWidth,
 		height:         gameHeight,
@@ -443,7 +442,6 @@ func (g *MyGame) Update() error {
 
 		} else {
 			g.paint(mx, my)
-			fmt.Println("PRINT")
 		}
 	}
 	g.cursor = POS{
@@ -470,14 +468,12 @@ type PIXEL struct {
 func (g *MyGame) paintFigure(pixels []PIXEL, x, y int) {
 	var loc_x = x / 4
 	var loc_y = y / 4
-	fmt.Println()
-	fmt.Println()
+
 	for _, pix := range pixels {
 		if pix.x+loc_x > gameHeight-1 || pix.x+loc_x < 0 || pix.y+loc_y > gameWidth-1 || pix.y+loc_y < 0 {
 			continue
 		}
 		g.field[pix.x+loc_x][pix.y+loc_y] = pix.value
-		fmt.Println(pix.x+loc_x, "   ", pix.y+loc_y)
 	}
 	g.is_figure_draw = false
 }
