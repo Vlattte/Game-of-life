@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	_ "image/png"
 	"log"
@@ -19,11 +20,13 @@ var black color.RGBA = color.RGBA{75, 139, 190, 255}  //95,95,95
 var white color.RGBA = color.RGBA{255, 232, 115, 255} //233,233,233
 
 const (
+	// реальный размер отображаемой области в пикселях
 	screenWidth  = 700
 	screenHeight = 640
 
-	gameWidth  = 640 / 4
-	gameHeight = 640 / 4
+	// делим на scale, потому что каждая клетка массива field занимаем scale на scale пикселей
+	gameWidth  = 640 / scale
+	gameHeight = 640 / scale
 )
 
 type POS struct {
@@ -31,98 +34,98 @@ type POS struct {
 	y int
 }
 
-func generate_row(size int) []byte {
+func generate_row(width int) []byte {
 	var arr = []byte{}
-	return generate_row_rec(size, arr)
+	return generate_row_rec(width, arr)
 }
 
-func generate_row_rec(size int, arr []byte) []byte {
-	if len(arr) == size {
+func generate_row_rec(width int, arr []byte) []byte {
+	if len(arr) == width {
 		return arr
 	}
 
 	if rand.Float32() < 0.1 {
 		var new_arr = append(arr, 1)
-		return generate_row_rec(size, new_arr)
+		return generate_row_rec(width, new_arr)
 	} else {
 		var new_arr = append(arr, 0)
-		return generate_row_rec(size, new_arr)
+		return generate_row_rec(width, new_arr)
 	}
 }
 
-func generate_field(size int) [][]byte {
+func generate_field(height int, width int) [][]byte {
 	var arr = [][]byte{}
-	return generate_field_rec(size, arr)
+	return generate_field_rec(height, width, arr)
 }
 
-func generate_field_rec(size int, field [][]byte) [][]byte {
-	if len(field) == size {
+func generate_field_rec(height int, width int, field [][]byte) [][]byte {
+	if len(field) == height {
 		return field
 	}
 
-	var row = generate_row(size)
+	var row = generate_row(width)
 	var new_field = append(field, row)
 
-	return generate_field_rec(size, new_field)
+	return generate_field_rec(height, width, new_field)
 }
 
 // генерируем новое поколение
-func gen_new_generation(size int, field [][]byte) [][]byte {
+func gen_new_generation(height int, width int, field [][]byte) [][]byte {
 	var coord POS = POS{0, 0}
 	var new_field = [][]byte{}
-	var new_generation = update_field(coord, size, field, new_field)
+	var new_generation = update_field(coord, height, width, field, new_field)
 	return new_generation
 }
 
 // проход по элементам поля
-func update_field(coord POS, size int, field [][]byte, gen_field [][]byte) [][]byte {
-	if len(gen_field) == size {
+func update_field(coord POS, height int, width int, field [][]byte, gen_field [][]byte) [][]byte {
+	if len(gen_field) == height {
 		return gen_field
 	}
 
-	var row = update_row(coord, size, field)
-	var next_coord POS = POS{0, coord.y + 1}
+	var row = update_row(coord, height, width, field)
+	var next_coord POS = POS{coord.x + 1, 0}
 	var new_field = append(gen_field, row)
 
-	return update_field(next_coord, size, field, new_field)
+	return update_field(next_coord, height, width, field, new_field)
 }
 
-func update_row(coord POS, size int, field [][]byte) []byte {
+func update_row(coord POS, height int, width int, field [][]byte) []byte {
 	var init_row = []byte{}
-	var new_row = update_row_rec(coord, size, field, init_row)
+	var new_row = update_row_rec(coord, height, width, field, init_row)
 	return new_row
 }
 
 // обновляем статусы по строке и возвращаем ее полностью
-func update_row_rec(coord POS, size int, field [][]byte, new_row []byte) []byte {
+func update_row_rec(coord POS, height int, width int, field [][]byte, new_row []byte) []byte {
 	// смотрим выживет ли клетка в новом поколении
-	var new_cell_status = get_next_cell_status(coord, size, field)
+	var new_cell_status = get_next_cell_status(coord, height, width, field)
 
 	// если строка закончилась, значит ничего не делаем
-	if coord.x >= size {
+	if coord.y >= width {
 		return new_row
 	}
 
 	var row = append(new_row, new_cell_status)
-	var next_coord POS = POS{coord.x + 1, coord.y}
-	return update_row_rec(next_coord, size, field, row)
+	var next_coord POS = POS{coord.x, coord.y + 1}
+	return update_row_rec(next_coord, height, width, field, row)
 }
 
 // считаем число соседей для переданной клетки и определяем будет ли она живой
-func get_next_cell_status(coord POS, size int, field [][]byte) byte {
+func get_next_cell_status(coord POS, height int, width int, field [][]byte) byte {
 	// проверяем все соседей
-	var l_up = is_alive(coord.x-1, coord.y-1, size, field)
-	var up = is_alive(coord.x, coord.y-1, size, field)
-	var r_up = is_alive(coord.x+1, coord.y-1, size, field)
-	var l = is_alive(coord.x-1, coord.y, size, field)
-	var r = is_alive(coord.x+1, coord.y, size, field)
-	var l_down = is_alive(coord.x-1, coord.y+1, size, field)
-	var down = is_alive(coord.x, coord.y+1, size, field)
-	var r_down = is_alive(coord.x+1, coord.y+1, size, field)
+	var l_up = is_alive(coord.x-1, coord.y-1, height, width, field)
+	var up = is_alive(coord.x, coord.y-1, height, width, field)
+	var r_up = is_alive(coord.x+1, coord.y-1, height, width, field)
+	var l = is_alive(coord.x-1, coord.y, height, width, field)
+	var r = is_alive(coord.x+1, coord.y, height, width, field)
+	var l_down = is_alive(coord.x-1, coord.y+1, height, width, field)
+	var down = is_alive(coord.x, coord.y+1, height, width, field)
+	var r_down = is_alive(coord.x+1, coord.y+1, height, width, field)
 
 	// считаем число соседей
 	var neigbours = l_up + up + r_up + l + r + l_down + down + r_down
-	var is_i_alive = is_alive(coord.x, coord.y, size, field)
+	var is_i_alive = is_alive(coord.x, coord.y, height, width, field)
 
 	// смотрим, что произойдет с клеткой в новом поколении
 	// РОЖДЕНИЕ: если у пустой клетки есть 3 живых соседа, то она становится живой
@@ -132,35 +135,42 @@ func get_next_cell_status(coord POS, size int, field [][]byte) byte {
 	if neigbours == 3 {
 		return 1
 	} else if (neigbours == 3 || neigbours == 2) && is_i_alive == 1 {
-		return field[coord.y][coord.x]
+		return field[coord.x][coord.y]
 	}
 
 	return 0 // клетка умирает, соседей либо > 2, либо < 3
 }
 
 // проверяем, живая ли ячейка
-func is_alive(x int, y int, size int, field [][]byte) byte {
+func is_alive(x int, y int, height int, width int, field [][]byte) byte {
 	// если вышли за поле, то там клетки нет
-	if x > size-1 || x < 0 || y > size-1 || y < 0 {
+	if x > height-1 || x < 0 || y > width-1 || y < 0 {
 		return 0
 	}
 
-	return field[y][x]
+	return field[x][y]
 }
 
 // Game implements ebiten.Game interface.
 type MyGame struct {
 	// состояние игры
-	counter        int
+	counter     int
+	max_counter int
+
 	is_pause       bool
 	is_figure_draw bool
 
 	field  [][]byte
 	pixels []PIXEL
+
+	// реальный размер всего поля == размер массива field с учетом расширения
+	// постоянно меняется, по мере движения пикселей
 	width  int
 	height int
 
 	// сдвиги координат, чтобы массив с полем был больше отображаемой области
+	// например, field размером 1000 на 1000, тогда x_offset = 250, y_offset = 250
+	// так будем показывать пиксели начиная с 250 по x и 250 по y
 	x_offset int
 	y_offset int
 
@@ -173,12 +183,13 @@ type MyGame struct {
 func NewGame(maxInitLiveCells int) *MyGame {
 	g := &MyGame{
 		counter:        10,
+		max_counter:    20,
 		is_pause:       true,
 		is_figure_draw: false,
 		width:          gameWidth,
 		height:         gameHeight,
-		x_offset:       gameWidth / 2,
-		y_offset:       gameHeight / 2,
+		x_offset:       0,
+		y_offset:       0,
 		// btn:      button,
 	}
 
@@ -415,21 +426,8 @@ func (g *MyGame) init(maxLiveCells int) {
 // Update proceeds the game state.
 // Update is called every tick (1/60 [s] by default).
 func (g *MyGame) Update() error {
-	if ebiten.IsKeyPressed(ebiten.KeySpace) {
-		g.is_pause = !g.is_pause
-		g.counter = 0
-	}
-
-	// если пауза, то не обновляем игру
-	if !g.is_pause {
-		g.counter++
-	}
-
-	// переходим к следующему поколению
-	if g.counter == 20 {
-		g.field = gen_new_generation(g.width, g.field)
-		g.counter = 0
-	}
+	// обрабатываем нажатия
+	g.keyEvent()
 
 	// update the UI
 	g.ui.Update()
@@ -452,10 +450,88 @@ func (g *MyGame) Update() error {
 	return nil
 }
 
+func (g *MyGame) keyEvent() {
+	// полная пауза
+	if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		g.is_pause = true
+		g.counter = -1
+	}
+
+	// если пауза, то не обновляем игру
+	if !g.is_pause {
+		g.counter++
+	}
+
+	// скорость 20
+	if ebiten.IsKeyPressed(ebiten.Key1) {
+		g.is_pause = false
+		g.max_counter = 20
+	}
+
+	// скорость 10
+	if ebiten.IsKeyPressed(ebiten.Key2) {
+		g.is_pause = false
+		g.max_counter = 10
+	}
+
+	// скорость 0
+	if ebiten.IsKeyPressed(ebiten.Key3) {
+		g.is_pause = false
+		g.max_counter = 0
+	}
+
+	// переходим к следующему поколению
+	if g.counter >= g.max_counter {
+		g.field = gen_new_generation(g.height, g.width, g.field)
+		g.counter = 0
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		g.y_offset++
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		g.y_offset--
+
+		// тут увеличиваем размер массива с помощью функции prepend
+		// и зануляем отклонение, чтобы не сломать массив
+		if g.y_offset < 0 {
+			g.field = append(g.field)
+			empty_arr := make([]byte, 1, 1)
+			for i := 0; i < g.height; i++ {
+				g.field[i] = append(empty_arr, g.field[i]...)
+			}
+
+			// fmt.Println("width = ", len(g.field[0]), "   g.y_offset = ", g.y_offset)
+			g.width++
+			g.y_offset = 0
+		}
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		g.x_offset--
+
+		// тут увеличиваем размер массива с помощью функции prepend
+		// и зануляем отклонение, чтобы не сломать массив
+		if g.x_offset < 0 {
+			empty_arr := make([][]byte, 0, 0)
+			sub_arr := make([]byte, g.width, g.width)
+			empty_arr = append(empty_arr, sub_arr)
+			g.field = append(empty_arr, g.field...)
+
+			// fmt.Println("height = ", len(g.field), "   g.x_offset = ", g.x_offset)
+			g.height++
+			g.x_offset = 0
+		}
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		g.x_offset++
+	}
+}
+
 // paint draws the brush on the given canvas image at the position (x, y).
 func (g *MyGame) paint(x, y int) {
-	if x < gameWidth*4 && y < gameWidth*4 {
-		g.field[x/4][y/4] = 1
+	if x < gameHeight*4 && y < gameWidth*4 && x > 0 && y > 0 {
+		g.field[g.x_offset+(x/4)][g.y_offset+(y/4)] = 1
 	}
 }
 
@@ -466,14 +542,15 @@ type PIXEL struct {
 }
 
 func (g *MyGame) paintFigure(pixels []PIXEL, x, y int) {
-	var loc_x = x / 4
-	var loc_y = y / 4
+	var loc_x = g.x_offset + x/4
+	var loc_y = g.y_offset + y/4
 
 	for _, pix := range pixels {
-		if pix.x+loc_x > gameHeight-1 || pix.x+loc_x < 0 || pix.y+loc_y > gameWidth-1 || pix.y+loc_y < 0 {
+		if pix.x+loc_x > g.x_offset+gameHeight-1 || pix.x+loc_x < 0 || pix.y+loc_y > g.y_offset+gameWidth-1 || pix.y+loc_y < 0 {
 			continue
 		}
 		g.field[pix.x+loc_x][pix.y+loc_y] = pix.value
+
 	}
 	g.is_figure_draw = false
 }
@@ -494,38 +571,66 @@ func loadButtonImage(filename string) (*widget.ButtonImage, error) {
 // Draw draws the game screen.
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *MyGame) Draw(screen *ebiten.Image) {
+
 	// очищаем экран
 	screen.Fill(white)
 	// screen.DrawImage(g.canvasImage, nil)
 
+	// показываем подсказки об управлении
+	showHints(screen)
+
+	// screen.SubImage()
 	// draw the UI onto the screen
 	g.ui.Draw(screen)
 
 	// рисуем линии отделяющие шаблонные фигуры
 	ebitenutil.DrawRect(screen, screenWidth-60, 0, 10, screenHeight, color.Black)
 
-	// кнопки
-	// var img, _, _ = ebitenutil.NewImageFromFile("patterns/block.png")
-	// op := ebiten.DrawImageOptions{}
-	// // op.GeoM.Scale(0.5, 0.5)
-	// op.GeoM.Translate(screenWidth-90, 0)
-	// screen.DrawImage(img, &op)
+	var x_size = gameHeight + g.x_offset
+	var y_size = gameWidth + g.y_offset
 
-	// вывод положения курсора
-	// msg := fmt.Sprintf("(%d, %d)", g.cursor.x, g.cursor.y)
-	// ebitenutil.DebugPrint(screen, msg)
+	// если вышли за границу массива, стоит его расширить и забить нулями
+	if x_size > g.height {
+		for i := 0; i < x_size-g.height; i++ {
+			g.field = append(g.field, make([]byte, g.width, g.width))
+		}
+		g.height = x_size
+		// fmt.Println("new height = ", g.height)
+	}
 
-	for x := 0; x < gameHeight; x++ {
-		for y := 0; y < gameWidth; y++ {
+	if y_size > g.width {
+		var delta = y_size - g.width
+		for i := 0; i < g.height; i++ {
+			for range delta {
+				g.field[i] = append(g.field[i], 0)
+			}
+		}
+		g.width = y_size
+		// fmt.Println("new width = ", g.width)
+	}
+
+	for x := g.x_offset; x < x_size; x++ {
+		// fmt.Println("height = ", len(g.field))
+		// fmt.Println("width = ", len(g.field[0]))
+		// fmt.Println("x_size = ", x_size) // 1640
+		for y := g.y_offset; y < y_size; y++ {
 			if g.field[x][y] == 1 {
 				for x1 := 0; x1 < scale; x1++ {
 					for y1 := 0; y1 < scale; y1++ {
-						screen.Set((x*scale)+x1, (y*scale)+y1, black)
+						screen.Set(((((x - g.x_offset) % gameHeight) * scale) + x1),
+							((((y - g.y_offset) % gameWidth) * scale) + y1), black)
 					}
 				}
 			}
 		}
 	}
+}
+
+func showHints(screen *ebiten.Image) {
+	// Draw the message.
+	tutorial := "Space: Pause\nArrow to move\n1, 2, 3: New generation frequency (1 - slow, 3 - fast)"
+	msg := fmt.Sprintf("%s", tutorial)
+	ebitenutil.DebugPrint(screen, msg)
 }
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
