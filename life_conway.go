@@ -200,8 +200,8 @@ func NewGame(maxInitLiveCells int) *MyGame {
 			widget.RowLayoutOpts.Spacing(10))),
 	)
 
-	// BLOCK
-	block_image, _ := loadButtonImage("patterns/block.png")
+	// Gosper Glider Gun
+	block_image, _ := loadButtonImage("patterns/Gosper_Glider_Gun.png")
 	button_block := widget.NewButton(
 		// set general widget options
 		widget.ButtonOpts.WidgetOpts(
@@ -215,13 +215,49 @@ func NewGame(maxInitLiveCells int) *MyGame {
 
 		// add a handler that reacts to clicking the button
 		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
-			// BLOCK
+			// Gosper Glider Gun
 			clear(g.pixels)
 			g.is_figure_draw = true
 			g.pixels = append(g.pixels, PIXEL{0, 0, 1})
-			g.pixels = append(g.pixels, PIXEL{1, 0, 1})
-			g.pixels = append(g.pixels, PIXEL{0, 1, 1})
-			g.pixels = append(g.pixels, PIXEL{1, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{-1, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{-1, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{-2, 2, 1})
+			g.pixels = append(g.pixels, PIXEL{-1, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{-2, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{-3, 0, 1})
+
+			g.pixels = append(g.pixels, PIXEL{-4, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{-4, 3, 1})
+			g.pixels = append(g.pixels, PIXEL{-5, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{-5, 3, 1})
+			g.pixels = append(g.pixels, PIXEL{-6, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{-6, 2, 1})
+			g.pixels = append(g.pixels, PIXEL{-7, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{-7, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{-7, 0, 1})
+
+			g.pixels = append(g.pixels, PIXEL{-16, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{-16, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{-17, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{-17, -1, 1})
+
+			g.pixels = append(g.pixels, PIXEL{3, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{3, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{3, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{4, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{4, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{4, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{5, -4, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{7, -4, 1})
+			g.pixels = append(g.pixels, PIXEL{7, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{7, -5, 1})
+			g.pixels = append(g.pixels, PIXEL{7, 1, 1})
+
+			g.pixels = append(g.pixels, PIXEL{17, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{17, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{18, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{18, -3, 1})
 		}),
 	)
 
