@@ -69,6 +69,120 @@ func generate_field_rec(height int, width int, field [][]byte) [][]byte {
 	return generate_field_rec(height, width, new_field)
 }
 
+// переход к новому поколению
+func next_generation(height int, width int, field [][]byte) extender_struct {
+	// проверяем, есть ли смысл расширять массив клеток
+	var extended_field = extend_field(height, width, field)
+	// меняем состояния клетки
+	var new_gen_field = gen_new_generation(extended_field.height, extended_field.width, extended_field.field)
+	var new_gen_extender extender_struct = extender_struct{extended_field.height, extended_field.width, new_gen_field, extended_field.x_offset, extended_field.y_offset}
+	return new_gen_extender
+}
+
+type extender_struct struct {
+	height   int
+	width    int
+	field    [][]byte
+	x_offset int
+	y_offset int
+}
+
+// проверяем, нужно ли расширение
+func extend_field(height int, width int, field [][]byte) extender_struct {
+	var first_row_neighbours = count_close_elements_in_row(0, 0, width, field[0])
+	var last_row_neighbours = count_close_elements_in_row(0, 0, width, field[height-1])
+	var first_col_neighbours = count_close_elements_in_column(0, 0, 0, height, field)
+	var last_col_neighbours = count_close_elements_in_column(width-1, 0, 0, height, field)
+
+	// prepend row
+	if first_row_neighbours == -1 {
+		var extended_field = prepend_row(width, field)
+		var extender extender_struct = extender_struct{height + 1, width, extended_field, 1, 0}
+		return extender
+	}
+	// append row
+	if last_row_neighbours == -1 {
+		empty_arr := make([]byte, width, width)
+		var extended_field = append(field, empty_arr)
+		var extender extender_struct = extender_struct{height + 1, width, extended_field, 0, 0}
+		return extender
+	}
+	// prepend column
+	if first_col_neighbours == -1 {
+		var extended_field = prepend_column(height, field)
+		var extender extender_struct = extender_struct{height, width + 1, extended_field, 0, 1}
+		return extender
+	}
+	// append column
+	if last_col_neighbours == -1 {
+		var extended_field = append_column(0, height, field, make([][]byte, 0, 0))
+		var extender extender_struct = extender_struct{height, width + 1, extended_field, 0, 0}
+		return extender
+	}
+	return extender_struct{height, width, field, 0, 0}
+}
+
+func append_column(row_idx int, height int, field [][]byte, extended_field [][]byte) [][]byte {
+	if row_idx == height {
+		return extended_field
+	}
+	var new_row = append(field[row_idx], 0)
+	var new_field = append_column(row_idx+1, height, field, append(extended_field, new_row))
+	return new_field
+}
+
+// проверяем, есть ли хотя бы 3 точки в строке рядом
+func count_close_elements_in_row(el_num int, counter int, height int, row []byte) int {
+	// если конец строки, или нашли 2 подряд идущих точки, то возвращаем
+	if el_num == height || counter == -1 {
+		return counter
+	}
+	// если нашли нужное кол-во точек, выходим из цикла
+	if counter == 2 {
+		return -1
+	}
+	// если нашли живую клетку, передаем дальше с увеличенным счетчиком
+	if row[el_num] == 1 {
+		return count_close_elements_in_row(el_num+1, counter+1, height, row)
+	}
+	// если клетка не живая, то обнуляем счетчик соседних клеток
+	return count_close_elements_in_row(el_num+1, 0, height, row)
+}
+
+// проверяем, есть ли хотя бы 3 точки в колонке рядом
+func count_close_elements_in_column(col_num int, el_num int, counter int, width int, field [][]byte) int {
+	// если конец строки, или нашли 2 подряд идущих точки, то возвращаем
+	if el_num == width || counter == -1 {
+		return counter
+	}
+	// если нашли нужное кол-во точек, выходим из цикла
+	if counter == 2 {
+		return -1
+	}
+	// если нашли живую клетку, передаем дальше с увеличенным счетчиком
+	if field[el_num][col_num] == 1 {
+		return count_close_elements_in_column(col_num, el_num+1, counter+1, width, field)
+	}
+	// если клетка не живая, то обнуляем счетчик соседних клеток
+	return count_close_elements_in_column(col_num, el_num+1, 0, width, field)
+}
+
+func prepend_column(height int, field [][]byte) [][]byte {
+	empty_arr := make([]byte, 1, 1)
+	for i := 0; i < height; i++ {
+		field[i] = append(empty_arr, field[i]...)
+	}
+
+	return field
+}
+
+func prepend_row(width int, field [][]byte) [][]byte {
+	empty_arr := make([][]byte, 0, 0)
+	sub_arr := make([]byte, width, width)
+	empty_arr = append(empty_arr, sub_arr)
+	return append(empty_arr, field...)
+}
+
 // генерируем новое поколение
 func gen_new_generation(height int, width int, field [][]byte) [][]byte {
 	var coord POS = POS{0, 0}
@@ -199,10 +313,9 @@ func NewGame(maxInitLiveCells int) *MyGame {
 		widget.ContainerOpts.Layout(widget.NewRowLayout(widget.RowLayoutOpts.Direction(widget.DirectionVertical),
 			widget.RowLayoutOpts.Spacing(10))),
 	)
-
 	// Gosper Glider Gun
-	block_image, _ := loadButtonImage("patterns/Gosper_Glider_Gun.png")
-	button_block := widget.NewButton(
+	gosper_gun_image, _ := loadButtonImage("patterns/Gosper_Glider_Gun.png")
+	button_gosper_gun := widget.NewButton(
 		// set general widget options
 		widget.ButtonOpts.WidgetOpts(
 			widget.WidgetOpts.LayoutData(widget.RowLayoutData{
@@ -211,7 +324,7 @@ func NewGame(maxInitLiveCells int) *MyGame {
 		),
 
 		// specify the images to use
-		widget.ButtonOpts.Image(block_image),
+		widget.ButtonOpts.Image(gosper_gun_image),
 
 		// add a handler that reacts to clicking the button
 		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
@@ -258,6 +371,80 @@ func NewGame(maxInitLiveCells int) *MyGame {
 			g.pixels = append(g.pixels, PIXEL{17, -3, 1})
 			g.pixels = append(g.pixels, PIXEL{18, -2, 1})
 			g.pixels = append(g.pixels, PIXEL{18, -3, 1})
+		}),
+	)
+
+	// FROG
+	frog_image, _ := loadButtonImage("patterns/frog.png")
+	button_frog := widget.NewButton(
+		// set general widget options
+		widget.ButtonOpts.WidgetOpts(
+			widget.WidgetOpts.LayoutData(widget.RowLayoutData{
+				Position: widget.RowLayoutPositionEnd,
+			}),
+		),
+
+		// specify the images to use
+		widget.ButtonOpts.Image(frog_image),
+
+		// add a handler that reacts to clicking the button
+		widget.ButtonOpts.ClickedHandler(func(args *widget.ButtonClickedEventArgs) {
+			// GLIDER
+			clear(g.pixels)
+			g.is_figure_draw = true
+			g.pixels = append(g.pixels, PIXEL{0, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{0, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{1, 2, 1})
+			g.pixels = append(g.pixels, PIXEL{1, -1, 1})
+
+			g.pixels = append(g.pixels, PIXEL{1, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{1, -4, 1})
+			g.pixels = append(g.pixels, PIXEL{2, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{2, -4, 1})
+			g.pixels = append(g.pixels, PIXEL{3, -4, 1})
+
+			g.pixels = append(g.pixels, PIXEL{1, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{1, 5, 1})
+			g.pixels = append(g.pixels, PIXEL{2, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{2, 5, 1})
+			g.pixels = append(g.pixels, PIXEL{3, 5, 1})
+
+			g.pixels = append(g.pixels, PIXEL{3, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{4, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{5, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{5, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{4, -1, 1})
+
+			g.pixels = append(g.pixels, PIXEL{3, 3, 1})
+			g.pixels = append(g.pixels, PIXEL{4, 3, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 3, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{4, 2, 1})
+
+			g.pixels = append(g.pixels, PIXEL{5, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{5, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{6, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{6, 2, 1})
+
+			g.pixels = append(g.pixels, PIXEL{7, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{8, -3, 1})
+
+			g.pixels = append(g.pixels, PIXEL{7, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{8, 4, 1})
+
+			g.pixels = append(g.pixels, PIXEL{10, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{10, -2, 1})
+			g.pixels = append(g.pixels, PIXEL{10, -1, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 0, 1})
+			g.pixels = append(g.pixels, PIXEL{11, -3, 1})
+			g.pixels = append(g.pixels, PIXEL{11, -4, 1})
+
+			g.pixels = append(g.pixels, PIXEL{10, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 3, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 2, 1})
+			g.pixels = append(g.pixels, PIXEL{10, 1, 1})
+			g.pixels = append(g.pixels, PIXEL{11, 4, 1})
+			g.pixels = append(g.pixels, PIXEL{11, 5, 1})
 		}),
 	)
 
@@ -427,7 +614,8 @@ func NewGame(maxInitLiveCells int) *MyGame {
 	)
 
 	// add the button as a child of the container
-	rootContainer.AddChild(button_block)
+	rootContainer.AddChild(button_gosper_gun)
+	rootContainer.AddChild(button_frog)
 	rootContainer.AddChild(button_glider)
 	rootContainer.AddChild(button_pulsar)
 	rootContainer.AddChild(button_blinker)
@@ -518,7 +706,13 @@ func (g *MyGame) keyEvent() {
 
 	// переходим к следующему поколению
 	if g.counter >= g.max_counter {
-		g.field = gen_new_generation(g.height, g.width, g.field)
+		var extender = next_generation(g.height, g.width, g.field)
+		g.field = extender.field
+		g.height = extender.height
+		g.width = extender.width
+		g.x_offset += extender.x_offset
+		g.y_offset += extender.y_offset
+
 		g.counter = 0
 	}
 
@@ -531,13 +725,11 @@ func (g *MyGame) keyEvent() {
 		// тут увеличиваем размер массива с помощью функции prepend
 		// и зануляем отклонение, чтобы не сломать массив
 		if g.y_offset < 0 {
-			g.field = append(g.field)
 			empty_arr := make([]byte, 1, 1)
 			for i := 0; i < g.height; i++ {
 				g.field[i] = append(empty_arr, g.field[i]...)
 			}
 
-			// fmt.Println("width = ", len(g.field[0]), "   g.y_offset = ", g.y_offset)
 			g.width++
 			g.y_offset = 0
 		}
@@ -554,7 +746,6 @@ func (g *MyGame) keyEvent() {
 			empty_arr = append(empty_arr, sub_arr)
 			g.field = append(empty_arr, g.field...)
 
-			// fmt.Println("height = ", len(g.field), "   g.x_offset = ", g.x_offset)
 			g.height++
 			g.x_offset = 0
 		}
@@ -607,7 +798,6 @@ func loadButtonImage(filename string) (*widget.ButtonImage, error) {
 // Draw draws the game screen.
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *MyGame) Draw(screen *ebiten.Image) {
-
 	// очищаем экран
 	screen.Fill(white)
 	// screen.DrawImage(g.canvasImage, nil)
@@ -631,7 +821,6 @@ func (g *MyGame) Draw(screen *ebiten.Image) {
 			g.field = append(g.field, make([]byte, g.width, g.width))
 		}
 		g.height = x_size
-		// fmt.Println("new height = ", g.height)
 	}
 
 	if y_size > g.width {
@@ -642,13 +831,9 @@ func (g *MyGame) Draw(screen *ebiten.Image) {
 			}
 		}
 		g.width = y_size
-		// fmt.Println("new width = ", g.width)
 	}
 
 	for x := g.x_offset; x < x_size; x++ {
-		// fmt.Println("height = ", len(g.field))
-		// fmt.Println("width = ", len(g.field[0]))
-		// fmt.Println("x_size = ", x_size) // 1640
 		for y := g.y_offset; y < y_size; y++ {
 			if g.field[x][y] == 1 {
 				for x1 := 0; x1 < scale; x1++ {
